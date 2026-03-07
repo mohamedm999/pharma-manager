@@ -2,25 +2,98 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import F
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiResponse, OpenApiExample, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 from .models import Medicament
 from .serializers import MedicamentSerializer
 
 @extend_schema_view(
-    list=extend_schema(summary="Lister les médicaments", tags=["Médicaments"]),
-    retrieve=extend_schema(summary="Détails d'un médicament", tags=["Médicaments"]),
-    create=extend_schema(summary="Créer un médicament", tags=["Médicaments"]),
-    update=extend_schema(summary="Mettre à jour un médicament", tags=["Médicaments"]),
-    partial_update=extend_schema(summary="Mise à jour partielle", tags=["Médicaments"]),
+    list=extend_schema(
+        summary="Lister les médicaments",
+        description="Récupère la liste paginée (10/page) de tous les médicaments ACTIFS. Permet le filtrage par 'categorie' et la recherche par 'nom'/'dci'.",
+        tags=["Médicaments"],
+        responses={
+            200: OpenApiResponse(
+                response=MedicamentSerializer(many=True),
+                description="Liste des médicaments récupérée.",
+                examples=[
+                    OpenApiExample(
+                        'Exemple de réponse GET list',
+                        value=[{
+                            "id": 1, "nom": "Doliprane", "dci": "Paracétamol", "forme": "Comprimé", 
+                            "dosage": "1000mg", "prix_achat": "1.50", "prix_vente": "2.50", 
+                            "stock_actuel": 50, "stock_minimum": 10, "est_en_alerte": False
+                        }]
+                    )
+                ]
+            )
+        }
+    ),
+    retrieve=extend_schema(
+        summary="Détails d'un médicament",
+        description="Récupère les détails d'un médicament spécifique via son ID.",
+        tags=["Médicaments"],
+        responses={
+            200: OpenApiResponse(response=MedicamentSerializer, description="Médicament trouvé."),
+            404: OpenApiResponse(description="Médicament introuvable ou inactif.")
+        }
+    ),
+    create=extend_schema(
+        summary="Créer un médicament",
+        description="Crée un nouveau médicament. Prix de vente doit être >= prix d'achat. Quantités doivent être positives.",
+        tags=["Médicaments"],
+        responses={
+            201: OpenApiResponse(response=MedicamentSerializer, description="Médicament créé avec succès."),
+            400: OpenApiResponse(description="Erreur de validation des champs fournis.")
+        }
+    ),
+    update=extend_schema(
+        summary="Mettre à jour un médicament",
+        description="Met à jour entièrement les informations d'un médicament existant.",
+        tags=["Médicaments"],
+        responses={
+            200: OpenApiResponse(response=MedicamentSerializer, description="Médicament mis à jour."),
+            400: OpenApiResponse(description="Erreurs de validation."),
+            404: OpenApiResponse(description="Médicament introuvable.")
+        }
+    ),
+    partial_update=extend_schema(
+        summary="Mise à jour partielle",
+        description="Met à jour partiellement les informations d'un médicament.",
+        tags=["Médicaments"],
+        responses={
+            200: OpenApiResponse(response=MedicamentSerializer, description="Médicament mis à jour."),
+            400: OpenApiResponse(description="Erreurs de validation."),
+            404: OpenApiResponse(description="Médicament introuvable.")
+        }
+    ),
     destroy=extend_schema(
         summary="Supprimer un médicament (Soft Delete)",
-        description="Ne supprime pas réellement l'entrée, mais le marque comme inactif (est_actif=False).",
-        tags=["Médicaments"]
+        description="Ne supprime pas réellement l'entrée, mais la marque comme inactive (est_actif=False).",
+        tags=["Médicaments"],
+        responses={
+            204: OpenApiResponse(description="Médicament marqué comme inactif avec succès."),
+            404: OpenApiResponse(description="Médicament introuvable.")
+        }
     ),
     alertes=extend_schema(
         summary="Médicaments en alerte de stock",
-        description="Retourne la liste des médicaments dont le stock actuel est inférieur ou égal au stock minimum.",
-        tags=["Médicaments"]
+        description="Retourne la liste des médicaments dont le stock actuel est inférieur ou égal au stock minimum. Pagination incluse.",
+        tags=["Médicaments"],
+        responses={
+            200: OpenApiResponse(
+                response=MedicamentSerializer(many=True),
+                description="Liste des médicaments en alerte.",
+                 examples=[
+                    OpenApiExample(
+                        'Alerte de stock',
+                        value=[{
+                            "id": 2, "nom": "Aspirine", "stock_actuel": 5, "stock_minimum": 20, "est_en_alerte": True
+                        }]
+                    )
+                ]
+            )
+        }
     )
 )
 class MedicamentViewSet(viewsets.ModelViewSet):

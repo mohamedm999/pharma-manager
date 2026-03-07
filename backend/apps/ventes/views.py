@@ -2,7 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 from .models import Vente
 from .serializers import VenteSerializer, VenteDetailSerializer
@@ -10,22 +10,74 @@ from .serializers import VenteSerializer, VenteDetailSerializer
 @extend_schema_view(
     list=extend_schema(
         summary="Lister les ventes",
-        description="Récupère la liste de toutes les ventes. Peut être filtrée par date.",
+        description="Récupère la liste paginée (10/page) de toutes les ventes. Permet de filtrer par une plage de dates.",
         tags=["Ventes"],
         parameters=[
             OpenApiParameter('date_debut', OpenApiTypes.DATE, description='Filtrer à partir de cette date (YYYY-MM-DD)', required=False),
             OpenApiParameter('date_fin', OpenApiTypes.DATE, description='Filtrer jusqu\'à cette date (YYYY-MM-DD)', required=False),
-        ]
+        ],
+        responses={
+            200: OpenApiResponse(
+                response=VenteDetailSerializer(many=True),
+                description="Liste des ventes récupérée avec succès.",
+                examples=[
+                    OpenApiExample(
+                        'Exemple Vente',
+                        value=[{
+                            "id": 1, "reference": "VNT-2024-0001", "date_vente": "2024-03-07T14:30:00Z", 
+                            "total_ttc": "15.50", "statut": "COMPLETEE", "notes": "Client habituel", 
+                            "est_actif": True, "lignes": [{"id": 1, "medicament_nom": "Doliprane", "quantite": 2, "sous_total": "5.00"}]
+                        }]
+                    )
+                ]
+            )
+        }
     ),
-    retrieve=extend_schema(summary="Détails d'une vente", tags=["Ventes"]),
-    create=extend_schema(summary="Créer une vente", tags=["Ventes"]),
-    update=extend_schema(summary="Mettre à jour une vente", tags=["Ventes"]),
-    partial_update=extend_schema(summary="Mise à jour partielle", tags=["Ventes"]),
-    destroy=extend_schema(summary="Supprimer une vente", tags=["Ventes"]),
+    retrieve=extend_schema(
+        summary="Détails d'une vente",
+        description="Récupère les détails enrichis d'une vente spécifique.",
+        tags=["Ventes"],
+        responses={
+            200: OpenApiResponse(response=VenteDetailSerializer, description="Détails de la vente."),
+            404: OpenApiResponse(description="Vente introuvable.")
+        }
+    ),
+    create=extend_schema(
+        summary="Créer une vente",
+        description="Enregistre une nouvelle vente. Calcule dynamiquement les sous-totaux, déduit les quantités du stock et créé les lignes. Renvoie une erreur 400 si le stock est insuffisant.",
+        tags=["Ventes"],
+        responses={
+            201: OpenApiResponse(response=VenteSerializer, description="Vente créée et stock déduit avec succès."),
+            400: OpenApiResponse(description="Stock insuffisant pour un ou plusieurs médicaments, ou données de requête invalides.")
+        }
+    ),
+    update=extend_schema(
+        summary="Mettre à jour une vente",
+        description="Mise à jour d'une vente (utiliser avec précaution pour ne pas désynchroniser les stocks).",
+        tags=["Ventes"]
+    ),
+    partial_update=extend_schema(
+        summary="Mise à jour partielle",
+        description="Patch d'une vente (ex: modifier les notes).",
+        tags=["Ventes"]
+    ),
+    destroy=extend_schema(
+        summary="Supprimer une vente",
+        description="Suppression d'une vente (déconseillé). Utiliser l'action d'annulation à la place.",
+        tags=["Ventes"]
+    ),
     annuler=extend_schema(
         summary="Annuler une vente",
-        description="Annule une vente, réintègre les stocks des médicaments vendus, et marque la vente comme inactive.",
-        tags=["Ventes"]
+        description="Action spécifique qui passe le statut de la vente à ANNULEE, réintègre proprement le stock des médicaments correspondants, et marque la vente comme inactive.",
+        tags=["Ventes"],
+        responses={
+            200: OpenApiResponse(
+                response=VenteDetailSerializer, 
+                description="Vente annulée et stock réintégré avec succès."
+            ),
+            400: OpenApiResponse(description="La vente est déjà annulée."),
+            404: OpenApiResponse(description="Vente introuvable.")
+        }
     )
 )
 class VenteViewSet(viewsets.ModelViewSet):
