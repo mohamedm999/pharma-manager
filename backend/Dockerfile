@@ -16,8 +16,6 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY . /app/
 
-RUN python manage.py collectstatic --noinput 2>/dev/null || true
-
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 RUN chown -R appuser:appgroup /app
 USER appuser
