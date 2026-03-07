@@ -1,7 +1,11 @@
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import VenteViewSet
+from .views import VenteViewSet, DashboardView
 
 router = DefaultRouter()
 router.register(r'', VenteViewSet, basename='vente')
 
-urlpatterns = router.urls
+urlpatterns = [
+    path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    path('', include(router.urls)),
+]

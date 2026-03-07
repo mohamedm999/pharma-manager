@@ -1,5 +1,11 @@
 from rest_framework import viewsets, status
+from rest_framework.views import APIView
 from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.db import transaction
+from django.db.models import Sum, F
+from django.utils.timezone import now
+from apps.medicaments.models import Medicament
 from rest_framework.response import Response
 from django.db import transaction
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse, OpenApiExample
@@ -131,3 +137,57 @@ class VenteViewSet(viewsets.ModelViewSet):
         # Retourner la vente mise à jour avec le serializer détaillé
         serializer = self.get_serializer(vente)
         return Response(serializer.data)
+
+
+class DashboardView(APIView):
+    """
+    API endpoint pour le tableau de bord (Vue globale)
+    """
+    
+    @extend_schema(
+        summary="Indicateurs clés du Dashboard",
+        description="Retourne le nombre total de médicaments, les alertes de stock, le nombre de ventes du jour et le chiffre d'affaires du jour.",
+        tags=["Dashboard"],
+        responses={
+            200: OpenApiResponse(
+                description="Statistiques du Dashboard",
+                examples=[
+                    OpenApiExample(
+                        'Exemple de stats',
+                        value={
+                            "total_medicaments": 120,
+                            "medicaments_alerte": 5,
+                            "ventes_jour": 12,
+                            "chiffre_affaires_jour": 245.50
+                        }
+                    )
+                ]
+            )
+        }
+    )
+    def get(self, request):
+        today = now().date()
+        
+        # Médicaments
+        total_medicaments = Medicament.objects.filter(est_actif=True).count()
+        medicaments_alerte = Medicament.objects.filter(
+            est_actif=True, 
+            stock_actuel__lte=F('stock_minimum')
+        ).count()
+        
+        # Ventes du jour complétées
+        ventes_jour_qs = Vente.objects.filter(
+            date_vente__date=today,
+            statut='COMPLETEE'
+        )
+        
+        nb_ventes_jour = ventes_jour_qs.count()
+        ca_jour = ventes_jour_qs.aggregate(total=Sum('total_ttc'))['total'] or 0
+        
+        return Response({
+            "total_medicaments": total_medicaments,
+            "medicaments_alerte": medicaments_alerte,
+            "ventes_jour": nb_ventes_jour,
+            "chiffre_affaires_jour": float(ca_jour)
+        })
+
