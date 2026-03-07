@@ -84,7 +84,15 @@ const MedicamentsPage = () => {
       setIsModalOpen(false);
       refetch();
     } catch (err) {
-      setSubmitError(err.response?.data?.detail || "Erreur lors de l'enregistrement. Vérifiez vos données.");
+      const apiErrors = err.response?.data;
+      if (apiErrors && typeof apiErrors === 'object') {
+        const messages = Object.entries(apiErrors)
+          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+          .join(' | ');
+        setSubmitError(messages);
+      } else {
+        setSubmitError("Erreur lors de l'enregistrement. Vérifiez vos données.");
+      }
     } finally {
       setIsSubmitting(false);
     }

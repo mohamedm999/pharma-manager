@@ -55,12 +55,12 @@ const MedicamentForm = ({ initialData, categories, onSubmit, isLoading }) => {
           <input style={styles.input} name="dci" value={formData.dci || ''} onChange={handleChange} />
         </div>
         <div style={styles.group}>
-          <label style={styles.label}>Forme (ex: Comprimé)</label>
-          <input style={styles.input} name="forme" value={formData.forme || ''} onChange={handleChange} />
+          <label style={styles.label}>Forme (ex: Comprimé) *</label>
+          <input required style={styles.input} name="forme" value={formData.forme || ''} onChange={handleChange} />
         </div>
         <div style={styles.group}>
-          <label style={styles.label}>Dosage (ex: 500mg)</label>
-          <input style={styles.input} name="dosage" value={formData.dosage || ''} onChange={handleChange} />
+          <label style={styles.label}>Dosage (ex: 500mg) *</label>
+          <input required style={styles.input} name="dosage" value={formData.dosage || ''} onChange={handleChange} />
         </div>
       </div>
 
@@ -88,8 +88,8 @@ const MedicamentForm = ({ initialData, categories, onSubmit, isLoading }) => {
 
       <div style={styles.row}>
         <div style={styles.group}>
-          <label style={styles.label}>Date Expiration</label>
-          <input type="date" style={styles.input} name="date_expiration" value={formData.date_expiration?.split('T')[0] || ''} onChange={handleChange} />
+          <label style={styles.label}>Date Expiration *</label>
+          <input required type="date" style={styles.input} name="date_expiration" value={formData.date_expiration?.split('T')[0] || ''} onChange={handleChange} />
         </div>
         <div style={{...styles.group, justifyContent: 'center'}}>
           <label style={styles.checkboxLabel}>
