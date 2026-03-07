@@ -1,45 +1,93 @@
-import React from 'react';
+import { LuPencil, LuTrash2, LuTriangleAlert, LuPackage } from 'react-icons/lu';
 
 const MedicamentList = ({ medicaments, onEdit, onDelete }) => {
   if (!medicaments || medicaments.length === 0) {
-    return <p style={styles.empty}>Aucun médicament trouvé.</p>;
+    return (
+      <div className="empty-state">
+        <div className="empty-state-icon"><LuPackage size={48} /></div>
+        <p className="empty-state-text">Aucun médicament trouvé</p>
+      </div>
+    );
   }
 
-  const getStockStatusStyle = (med) => {
-    if (med.stock_actuel === 0) return styles.stockZero;
-    if (med.est_en_alerte) return styles.stockAlerte;
-    return styles.stockOk;
+  const getStockBadge = (med) => {
+    if (med.est_en_alerte) {
+      return (
+        <span className="badge badge-danger">
+          <LuTriangleAlert size={12} /> {med.stock_actuel}
+        </span>
+      );
+    }
+    if (med.stock_actuel <= (med.stock_minimum || 10) * 1.5) {
+      return <span className="badge badge-warning">{med.stock_actuel}</span>;
+    }
+    return <span className="badge badge-success">{med.stock_actuel}</span>;
   };
 
   return (
-    <div style={styles.tableContainer}>
-      <table style={styles.table}>
+    <div className="table-container">
+      <table>
         <thead>
           <tr>
-            <th style={styles.th}>Nom</th>
-            <th style={styles.th}>Catégorie</th>
-            <th style={styles.th}>Prix (Vente)</th>
-            <th style={styles.th}>Stock</th>
-            <th style={styles.th}>Actions</th>
+            <th>Médicament</th>
+            <th>Catégorie</th>
+            <th>Forme / Dosage</th>
+            <th>Prix vente</th>
+            <th>Stock</th>
+            <th>Expiration</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {medicaments.map(med => (
-            <tr key={med.id} style={styles.tr}>
-              <td style={styles.td}>
-                <strong>{med.nom}</strong>
-                <div style={styles.subtext}>{med.dci || ''} - {med.dosage || ''}</div>
+          {medicaments.map((med) => (
+            <tr key={med.id}>
+              <td>
+                <div style={{ fontWeight: 600 }}>{med.nom}</div>
+                {med.dci && <div className="table-subtext">{med.dci}</div>}
               </td>
-              <td style={styles.td}>{med.categorie_nom}</td>
-              <td style={styles.td}>{med.prix_vente} €</td>
-              <td style={styles.td}>
-                <span style={{...styles.badge, ...getStockStatusStyle(med)}}>
-                  {med.stock_actuel} (Min: {med.stock_minimum})
-                </span>
+              <td>
+                {med.categorie_nom ? (
+                  <span className="badge badge-info">{med.categorie_nom}</span>
+                ) : (
+                  <span style={{ color: 'var(--gray-400)' }}>—</span>
+                )}
               </td>
-              <td style={styles.td}>
-                <button style={styles.editBtn} onClick={() => onEdit(med)}>Modifier</button>
-                <button style={styles.deleteBtn} onClick={() => onDelete(med.id)}>Supprimer</button>
+              <td>
+                <div>{med.forme || '—'}</div>
+                {med.dosage && <div className="table-subtext">{med.dosage}</div>}
+              </td>
+              <td style={{ fontWeight: 600 }}>
+                {Number(med.prix_vente).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} DH
+              </td>
+              <td>{getStockBadge(med)}</td>
+              <td>
+                {med.date_expiration ? (
+                  <span style={{ 
+                    color: new Date(med.date_expiration) < new Date() ? 'var(--danger-500)' : 'var(--gray-600)',
+                    fontWeight: new Date(med.date_expiration) < new Date() ? 600 : 400
+                  }}>
+                    {new Date(med.date_expiration).toLocaleDateString('fr-FR')}
+                  </span>
+                ) : '—'}
+              </td>
+              <td>
+                <div className="table-actions">
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => onEdit(med)}
+                    title="Modifier"
+                  >
+                    <LuPencil size={15} />
+                  </button>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => onDelete(med)}
+                    title="Supprimer"
+                    style={{ padding: '0.4rem 0.6rem' }}
+                  >
+                    <LuTrash2 size={15} />
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
@@ -47,85 +95,6 @@ const MedicamentList = ({ medicaments, onEdit, onDelete }) => {
       </table>
     </div>
   );
-};
-
-const styles = {
-  empty: {
-    textAlign: 'center',
-    padding: '2rem',
-    color: '#666',
-    backgroundColor: '#f9fafb',
-    borderRadius: '8px',
-  },
-  tableContainer: {
-    overflowX: 'auto',
-    backgroundColor: '#fff',
-    borderRadius: '8px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-  },
-  th: {
-    backgroundColor: '#f3f4f6',
-    padding: '1rem',
-    textAlign: 'left',
-    color: '#374151',
-    fontWeight: '600',
-    borderBottom: '2px solid #e5e7eb',
-  },
-  tr: {
-    borderBottom: '1px solid #e5e7eb',
-    transition: 'background-color 0.2s',
-  },
-  td: {
-    padding: '1rem',
-    verticalAlign: 'middle',
-  },
-  subtext: {
-    fontSize: '0.85rem',
-    color: '#6b7280',
-    marginTop: '0.25rem',
-  },
-  badge: {
-    display: 'inline-block',
-    padding: '0.25rem 0.5rem',
-    borderRadius: '9999px',
-    fontSize: '0.85rem',
-    fontWeight: '500',
-  },
-  stockOk: {
-    backgroundColor: '#d1fae5',
-    color: '#065f46',
-  },
-  stockAlerte: {
-    backgroundColor: '#fef3c7',
-    color: '#92400e',
-  },
-  stockZero: {
-    backgroundColor: '#fee2e2',
-    color: '#991b1b',
-  },
-  editBtn: {
-    backgroundColor: '#eff6ff',
-    color: '#1d4ed8',
-    border: '1px solid #bfdbfe',
-    padding: '0.5rem 1rem',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    marginRight: '0.5rem',
-    fontSize: '0.85rem',
-  },
-  deleteBtn: {
-    backgroundColor: '#fef2f2',
-    color: '#b91c1c',
-    border: '1px solid #fecaca',
-    padding: '0.5rem 1rem',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '0.85rem',
-  }
 };
 
 export default MedicamentList;

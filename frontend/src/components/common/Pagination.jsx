@@ -1,89 +1,68 @@
-import React from 'react';
+import { LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   if (totalPages <= 1) return null;
 
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      let start = Math.max(2, currentPage - 1);
+      let end = Math.min(totalPages - 1, currentPage + 1);
+
+      if (currentPage <= 2) {
+        end = Math.min(4, totalPages - 1);
+      }
+      if (currentPage >= totalPages - 1) {
+        start = Math.max(totalPages - 3, 2);
+      }
+
+      if (start > 2) pages.push('...');
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (end < totalPages - 1) pages.push('...');
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
 
   return (
-    <div style={styles.container}>
+    <div className="pagination">
       <button
-        style={{ ...styles.btn, ...(currentPage === 1 ? styles.disabled : {}) }}
+        disabled={currentPage <= 1}
         onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
       >
-        Précédent
+        <LuChevronLeft size={16} />
       </button>
-      
-      <div style={styles.pagesWrapper}>
-        {pages.map(page => (
+
+      {getPageNumbers().map((page, idx) =>
+        page === '...' ? (
+          <span key={`dots-${idx}`} style={{ padding: '0.45rem 0.5rem', color: 'var(--gray-400)' }}>
+            ...
+          </span>
+        ) : (
           <button
             key={page}
-            style={{ 
-              ...styles.pageBtn, 
-              ...(page === currentPage ? styles.activePage : {}) 
-            }}
+            className={page === currentPage ? 'active' : ''}
             onClick={() => onPageChange(page)}
           >
             {page}
           </button>
-        ))}
-      </div>
+        )
+      )}
 
       <button
-        style={{ ...styles.btn, ...(currentPage === totalPages ? styles.disabled : {}) }}
+        disabled={currentPage >= totalPages}
         onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages}
       >
-        Suivant
+        <LuChevronRight size={16} />
       </button>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '1rem',
-    marginTop: '2rem',
-    padding: '1rem 0',
-  },
-  pagesWrapper: {
-    display: 'flex',
-    gap: '0.25rem',
-  },
-  btn: {
-    padding: '0.5rem 1rem',
-    border: '1px solid #ddd',
-    backgroundColor: '#fff',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '0.9rem',
-    color: '#333',
-    transition: 'background-color 0.2s',
-  },
-  pageBtn: {
-    padding: '0.5rem 0.75rem',
-    border: '1px solid #ddd',
-    backgroundColor: '#fff',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '0.9rem',
-    color: '#333',
-  },
-  activePage: {
-    backgroundColor: '#3498db',
-    color: '#fff',
-    borderColor: '#3498db',
-    fontWeight: 'bold',
-  },
-  disabled: {
-    opacity: 0.5,
-    cursor: 'not-allowed',
-    backgroundColor: '#f9f9f9',
-  }
 };
 
 export default Pagination;

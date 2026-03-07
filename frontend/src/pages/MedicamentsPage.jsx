@@ -1,167 +1,144 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { LuPlus, LuPill } from 'react-icons/lu';
+import toast from 'react-hot-toast';
 import useMedicaments from '../hooks/useMedicaments';
-import useCategories from '../hooks/useCategories';
-import { createMedicament, updateMedicament, deleteMedicament } from '../api/medicamentsApi';
-
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import ErrorMessage from '../components/common/ErrorMessage';
-import Modal from '../components/common/Modal';
-import Pagination from '../components/common/Pagination';
-
+import MedicamentFilters from '../components/medicaments/MedicamentFilters';
 import MedicamentList from '../components/medicaments/MedicamentList';
 import MedicamentForm from '../components/medicaments/MedicamentForm';
-import MedicamentFilters from '../components/medicaments/MedicamentFilters';
+import Modal from '../components/common/Modal';
+import Pagination from '../components/common/Pagination';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import ErrorMessage from '../components/common/ErrorMessage';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import { createMedicament, updateMedicament, deleteMedicament } from '../api/medicamentsApi';
 
 const MedicamentsPage = () => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedMedicament, setSelectedMedicament] = useState(null);
-  const [submitError, setSubmitError] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { data, loading, error, refetch, filters, setFilters } = useMedicaments({ page: 1 });
+  const [showModal, setShowModal] = useState(false);
+  const [editingMed, setEditingMed] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
-  const { 
-    data: categoriesData 
-  } = useCategories();
+  const medicaments = data?.results || [];
+  const totalPages = data?.total_pages || 1;
+  const currentPage = filters.page || 1;
 
-  const { 
-    data: medicamentsData, 
-    loading: medicamentsLoading, 
-    error: medicamentsError, 
-    filters,
-    setFilters,
-    refetch 
-  } = useMedicaments({ page: 1 });
-
-  // Gestion des filtres
-  const handleSearch = (searchTerm) => {
-    setCurrentPage(1);
-    setFilters(prev => ({ ...prev, search: searchTerm, page: 1 }));
+  const handleCreate = () => {
+    setEditingMed(null);
+    setShowModal(true);
   };
 
-  const handleCategoryChange = (categoryId) => {
-    setCurrentPage(1);
-    setFilters(prev => ({ ...prev, categorie: categoryId, page: 1 }));
+  const handleEdit = (med) => {
+    setEditingMed(med);
+    setShowModal(true);
+  };
+
+  const handleDelete = (med) => {
+    setConfirmDelete(med);
+  };
+
+  const handleFormSubmit = async (payload) => {
+    if (editingMed) {
+      await updateMedicament(editingMed.id, payload);
+      toast.success(`"${payload.nom}" modifié avec succès`);
+    } else {
+      await createMedicament(payload);
+      toast.success(`"${payload.nom}" ajouté avec succès`);
+    }
+    setShowModal(false);
+    setEditingMed(null);
+    refetch();
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return;
+    try {
+      await deleteMedicament(confirmDelete.id);
+      toast.success(`"${confirmDelete.nom}" supprimé`);
+      setConfirmDelete(null);
+      refetch();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.detail || 'Erreur lors de la suppression'
+      );
+      setConfirmDelete(null);
+    }
   };
 
   const handlePageChange = (page) => {
-    setCurrentPage(page);
-    setFilters(prev => ({ ...prev, page }));
+    setFilters((prev) => ({ ...prev, page }));
   };
-
-  // Actions d'interface
-  const handleAddClick = () => {
-    setSelectedMedicament(null);
-    setSubmitError(null);
-    setIsModalOpen(true);
-  };
-
-  const handleEditClick = (medicament) => {
-    setSelectedMedicament(medicament);
-    setSubmitError(null);
-    setIsModalOpen(true);
-  };
-
-  const handleDeleteClick = async (id) => {
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce médicament ?")) {
-      try {
-        await deleteMedicament(id);
-        refetch();
-      } catch (err) {
-        alert("Erreur lors de la suppression.");
-      }
-    }
-  };
-
-  const handleFormSubmit = async (formData) => {
-    setIsSubmitting(true);
-    setSubmitError(null);
-    try {
-      if (selectedMedicament) {
-        await updateMedicament(selectedMedicament.id, formData);
-      } else {
-        await createMedicament(formData);
-      }
-      setIsModalOpen(false);
-      refetch();
-    } catch (err) {
-      const apiErrors = err.response?.data;
-      if (apiErrors && typeof apiErrors === 'object') {
-        const messages = Object.entries(apiErrors)
-          .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
-          .join(' | ');
-        setSubmitError(messages);
-      } else {
-        setSubmitError("Erreur lors de l'enregistrement. Vérifiez vos données.");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Extraction de la pagination enrichie DRF
-  const results = medicamentsData?.results || [];
-  const totalPages = medicamentsData?.total_pages || 1;
-  // const backendCurrentPage = medicamentsData?.current_page; // available for use
 
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
-        <h2>Gestion des Médicaments</h2>
-        <button style={styles.addBtn} onClick={handleAddClick}>
-          + Ajouter un Médicament
-        </button>
-      </header>
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h2>
+            <LuPill size={24} style={{ verticalAlign: 'middle', marginRight: '0.5rem', color: 'var(--primary-600)' }} />
+            Médicaments
+          </h2>
+          <p className="page-header-subtitle">
+            {data?.count ?? 0} médicament{(data?.count ?? 0) > 1 ? 's' : ''} enregistré{(data?.count ?? 0) > 1 ? 's' : ''}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button className="btn btn-primary" onClick={handleCreate}>
+            <LuPlus size={16} /> Ajouter
+          </button>
+        </div>
+      </div>
 
-      <MedicamentFilters 
-        categories={categoriesData} 
-        onSearch={handleSearch}
-        selectedCategory={filters.categorie}
-        onCategoryChange={handleCategoryChange}
-      />
+      <MedicamentFilters filters={filters} onFiltersChange={setFilters} />
 
-      {medicamentsError && <ErrorMessage message={medicamentsError} />}
-
-      {medicamentsLoading ? (
+      {loading ? (
         <LoadingSpinner />
+      ) : error ? (
+        <ErrorMessage message={error} />
       ) : (
         <>
-          <MedicamentList 
-            medicaments={results} 
-            onEdit={handleEditClick} 
-            onDelete={handleDeleteClick} 
+          <MedicamentList
+            medicaments={medicaments}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
           />
-          {totalPages > 1 && (
-            <Pagination 
-              currentPage={currentPage} 
-              totalPages={totalPages} 
-              onPageChange={handlePageChange} 
-            />
-          )}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
         </>
       )}
 
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)}
-        title={selectedMedicament ? "Modifier le médicament" : "Ajouter un médicament"}
-      >
-        {submitError && <ErrorMessage message={submitError} />}
-        <MedicamentForm 
-          initialData={selectedMedicament}
-          categories={categoriesData}
-          onSubmit={handleFormSubmit}
-          isLoading={isSubmitting}
+      {showModal && (
+        <Modal
+          title={editingMed ? 'Modifier le médicament' : 'Ajouter un médicament'}
+          onClose={() => {
+            setShowModal(false);
+            setEditingMed(null);
+          }}
+        >
+          <MedicamentForm
+            initialData={editingMed}
+            onSubmit={handleFormSubmit}
+            onCancel={() => {
+              setShowModal(false);
+              setEditingMed(null);
+            }}
+          />
+        </Modal>
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Supprimer le médicament"
+          message={`Êtes-vous sûr de vouloir supprimer "${confirmDelete.nom}" ? Cette action est irréversible.`}
+          variant="danger"
+          confirmText="Supprimer"
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setConfirmDelete(null)}
         />
-      </Modal>
-      
+      )}
     </div>
   );
-};
-
-const styles = {
-  page: { padding: '2rem', maxWidth: '1200px', margin: '0 auto' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' },
-  addBtn: { backgroundColor: '#10b981', color: '#fff', padding: '0.75rem 1.5rem', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem' }
 };
 
 export default MedicamentsPage;

@@ -1,176 +1,197 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { LuPlus, LuShoppingCart, LuFilter, LuDownload } from 'react-icons/lu';
+import toast from 'react-hot-toast';
 import useVentes from '../hooks/useVentes';
-import { createVente, annulerVente } from '../api/ventesApi';
-
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import ErrorMessage from '../components/common/ErrorMessage';
+import VenteList from '../components/ventes/VenteList';
+import VenteForm from '../components/ventes/VenteForm';
+import VenteDetail from '../components/ventes/VenteDetail';
 import Modal from '../components/common/Modal';
 import Pagination from '../components/common/Pagination';
-
-import VenteForm from '../components/ventes/VenteForm';
-import VenteList from '../components/ventes/VenteList';
-import VenteDetail from '../components/ventes/VenteDetail';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import ErrorMessage from '../components/common/ErrorMessage';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import { createVente, annulerVente } from '../api/ventesApi';
+import axiosInstance from '../api/axiosConfig';
 
 const VentesPage = () => {
-  const [currentPage, setCurrentPage] = useState(1);
+  const { data, loading, error, refetch, filters, setFilters } = useVentes({ page: 1 });
+  const [showForm, setShowForm] = useState(false);
+  const [detailId, setDetailId] = useState(null);
+  const [confirmCancel, setConfirmCancel] = useState(null);
   const [dateDebut, setDateDebut] = useState('');
   const [dateFin, setDateFin] = useState('');
-  
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedVente, setSelectedVente] = useState(null);
-  
-  const [submitError, setSubmitError] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data, loading, error, refetch, setFilters } = useVentes({ page: 1 });
-
-  const handleFilterDate = () => {
-    setCurrentPage(1);
-    setFilters({ page: 1, date_debut: dateDebut, date_fin: dateFin });
-  };
-
-  const handleClearFilters = () => {
-    setDateDebut('');
-    setDateFin('');
-    setCurrentPage(1);
-    setFilters({ page: 1 });
-  };
+  const ventes = data?.results || [];
+  const totalPages = data?.total_pages || 1;
+  const currentPage = filters.page || 1;
 
   const handleCreateVente = async (payload) => {
-    setIsSubmitting(true);
-    setSubmitError(null);
+    await createVente(payload);
+    toast.success('Vente créée avec succès !');
+    setShowForm(false);
+    refetch();
+  };
+
+  const handleCancelVente = (vente) => {
+    setConfirmCancel(vente);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!confirmCancel) return;
     try {
-      await createVente(payload);
-      setIsFormModalOpen(false);
+      await annulerVente(confirmCancel.id);
+      toast.success(`Vente ${confirmCancel.reference || '#' + confirmCancel.id} annulée`);
+      setConfirmCancel(null);
       refetch();
     } catch (err) {
-      setSubmitError(err.response?.data?.detail || "Erreur lors de la création de la vente.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleViewDetail = (vente) => {
-    setSelectedVente(vente);
-    setIsDetailModalOpen(true);
-  };
-
-  const handleCancelVente = async (vente) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir annuler la vente ${vente.reference} ? Le stock sera réintégré.`)) {
-      try {
-        await annulerVente(vente.id);
-        refetch();
-        // Si le modal de détail est ouvert pour cette vente, on le met à jour ou on le ferme
-        if (isDetailModalOpen && selectedVente?.id === vente.id) {
-            setIsDetailModalOpen(false);
-        }
-      } catch (err) {
-        alert(err.response?.data?.detail || "Erreur lors de l'annulation.");
-      }
+      toast.error(
+        err.response?.data?.detail || 'Erreur lors de l\'annulation'
+      );
+      setConfirmCancel(null);
     }
   };
 
   const handlePageChange = (page) => {
-    setCurrentPage(page);
-    setFilters(prev => ({ ...prev, page }));
+    setFilters((prev) => ({ ...prev, page }));
   };
 
-  const results = data?.results || [];
-  const totalPages = data?.total_pages || 1;
+  const handleDateFilter = () => {
+    const newFilters = { ...filters, page: 1 };
+    if (dateDebut) newFilters.date_debut = dateDebut;
+    else delete newFilters.date_debut;
+    if (dateFin) newFilters.date_fin = dateFin;
+    else delete newFilters.date_fin;
+    setFilters(newFilters);
+  };
+
+  const clearDateFilter = () => {
+    setDateDebut('');
+    setDateFin('');
+    const newFilters = { ...filters, page: 1 };
+    delete newFilters.date_debut;
+    delete newFilters.date_fin;
+    setFilters(newFilters);
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      const response = await axiosInstance.get('/ventes/export_csv/', {
+        responseType: 'blob',
+        params: { date_debut: dateDebut || undefined, date_fin: dateFin || undefined },
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'ventes_export.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Export CSV téléchargé');
+    } catch {
+      toast.error("Erreur lors de l'export CSV");
+    }
+  };
+
+  // If viewing detail
+  if (detailId) {
+    return (
+      <div className="page">
+        <VenteDetail venteId={detailId} onBack={() => setDetailId(null)} />
+      </div>
+    );
+  }
 
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
-        <h2>Historique des Ventes</h2>
-        <button style={styles.addBtn} onClick={() => setIsFormModalOpen(true)}>
-          + Nouvelle Vente
-        </button>
-      </header>
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h2>
+            <LuShoppingCart size={24} style={{ verticalAlign: 'middle', marginRight: '0.5rem', color: 'var(--primary-600)' }} />
+            Ventes
+          </h2>
+          <p className="page-header-subtitle">
+            {data?.count ?? 0} vente{(data?.count ?? 0) > 1 ? 's' : ''} enregistrée{(data?.count ?? 0) > 1 ? 's' : ''}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button className="btn btn-ghost" onClick={handleExportCSV}>
+            <LuDownload size={16} /> Export CSV
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowForm(true)}>
+            <LuPlus size={16} /> Nouvelle vente
+          </button>
+        </div>
+      </div>
 
-      {/* Barre de filtres par date */}
-      <div style={styles.filtersContainer}>
-        <div style={styles.dateGroup}>
-          <label style={styles.dateLabel}>Du :</label>
-          <input 
-            type="date" 
-            style={styles.dateInput} 
-            value={dateDebut} 
-            onChange={(e) => setDateDebut(e.target.value)} 
+      {/* Date Filters */}
+      <div className="date-filters">
+        <div className="date-group">
+          <label>Date début</label>
+          <input
+            type="date"
+            value={dateDebut}
+            onChange={(e) => setDateDebut(e.target.value)}
           />
         </div>
-        <div style={styles.dateGroup}>
-          <label style={styles.dateLabel}>Au :</label>
-          <input 
-            type="date" 
-            style={styles.dateInput} 
-            value={dateFin} 
-            onChange={(e) => setDateFin(e.target.value)} 
+        <div className="date-group">
+          <label>Date fin</label>
+          <input
+            type="date"
+            value={dateFin}
+            onChange={(e) => setDateFin(e.target.value)}
           />
         </div>
-        <button style={styles.filterBtn} onClick={handleFilterDate}>Filtrer</button>
+        <button className="btn btn-primary btn-sm" onClick={handleDateFilter}>
+          <LuFilter size={14} /> Filtrer
+        </button>
         {(dateDebut || dateFin) && (
-          <button style={styles.clearBtn} onClick={handleClearFilters}>Effacer</button>
+          <button className="btn btn-ghost btn-sm" onClick={clearDateFilter}>
+            Réinitialiser
+          </button>
         )}
       </div>
 
-      {error && <ErrorMessage message={error} />}
-
       {loading ? (
         <LoadingSpinner />
+      ) : error ? (
+        <ErrorMessage message={error} />
       ) : (
         <>
-          <VenteList 
-            ventes={results} 
-            onViewDetail={handleViewDetail}
-            onCancelVente={handleCancelVente}
+          <VenteList
+            ventes={ventes}
+            onViewDetail={(id) => setDetailId(id)}
+            onCancel={handleCancelVente}
           />
-          {totalPages > 1 && (
-            <Pagination 
-              currentPage={currentPage} 
-              totalPages={totalPages} 
-              onPageChange={handlePageChange} 
-            />
-          )}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
         </>
       )}
 
-      {/* Modal Création Vente */}
-      <Modal
-        isOpen={isFormModalOpen}
-        onClose={() => !isSubmitting && setIsFormModalOpen(false)}
-        title="Nouvelle Vente"
-      >
-        {submitError && <ErrorMessage message={submitError} />}
-        <VenteForm 
-          onSubmit={handleCreateVente}
-          isLoading={isSubmitting}
+      {showForm && (
+        <Modal title="Nouvelle vente" onClose={() => setShowForm(false)}>
+          <VenteForm
+            onSubmit={handleCreateVente}
+            onCancel={() => setShowForm(false)}
+          />
+        </Modal>
+      )}
+
+      {confirmCancel && (
+        <ConfirmDialog
+          title="Annuler la vente"
+          message={`Êtes-vous sûr de vouloir annuler la vente ${confirmCancel.reference || '#' + confirmCancel.id} ? Le stock sera réintégré.`}
+          variant="warning"
+          confirmText="Annuler la vente"
+          onConfirm={handleConfirmCancel}
+          onCancel={() => setConfirmCancel(null)}
         />
-      </Modal>
-
-      {/* Modal Détails Vente */}
-      <Modal
-        isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
-        title="Détails de la Vente"
-      >
-        <VenteDetail vente={selectedVente} />
-      </Modal>
-
+      )}
     </div>
   );
-};
-
-const styles = {
-  page: { padding: '2rem', maxWidth: '1200px', margin: '0 auto' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' },
-  addBtn: { backgroundColor: '#3b82f6', color: '#fff', padding: '0.75rem 1.5rem', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem' },
-  filtersContainer: { display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '2rem', flexWrap: 'wrap', backgroundColor: '#f9fafb', padding: '1rem', borderRadius: '8px' },
-  dateGroup: { display: 'flex', flexDirection: 'column', gap: '0.25rem' },
-  dateLabel: { fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' },
-  dateInput: { padding: '0.5rem', borderRadius: '4px', border: '1px solid #d1d5db', outline: 'none' },
-  filterBtn: { padding: '0.5rem 1.5rem', backgroundColor: '#4b5563', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', height: '38px' },
-  clearBtn: { padding: '0.5rem 1.5rem', backgroundColor: '#e5e7eb', color: '#4b5563', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', height: '38px' }
 };
 
 export default VentesPage;
