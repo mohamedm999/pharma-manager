@@ -7,6 +7,10 @@ from drf_spectacular.types import OpenApiTypes
 from .models import Medicament
 from .serializers import MedicamentSerializer
 
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
+from .filters import MedicamentFilter
+
 @extend_schema_view(
     list=extend_schema(
         summary="Lister les médicaments",
@@ -101,7 +105,8 @@ class MedicamentViewSet(viewsets.ModelViewSet):
     API endpoint pour gérer les médicaments (CRUD complet).
     """
     serializer_class = MedicamentSerializer
-    filterset_fields = ['categorie']
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_class = MedicamentFilter
     search_fields = ['nom', 'dci']
 
     def get_queryset(self):

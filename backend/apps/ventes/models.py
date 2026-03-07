@@ -4,6 +4,17 @@ from apps.medicaments.models import Medicament
 from decimal import Decimal
 
 class Vente(models.Model):
+    """
+    Représente une transaction de vente dans la pharmacie.
+
+    Attributs:
+        reference (str): Code unique auto-généré au format VNT-YYYY-XXXX.
+        date_vente (datetime): Date et heure de la transaction.
+        total_ttc (Decimal): Montant total calculé automatiquement.
+        statut (str): État de la vente (EN_COURS, COMPLETEE, ANNULEE).
+        notes (str): Remarques optionnelles sur la vente.
+        est_actif (bool): Soft delete. False = vente archivée.
+    """
     STATUT_CHOICES = [
         ('EN_COURS', 'En cours'),
         ('COMPLETEE', 'Complétée'),
@@ -44,6 +55,16 @@ class Vente(models.Model):
 
 
 class LigneVente(models.Model):
+    """
+    Représente une ligne individuelle dans une vente (un médicament vendu).
+
+    Attributs:
+        vente (ForeignKey): Référence vers la vente parente.
+        medicament (ForeignKey): Médicament concerné.
+        quantite (int): Quantité vendue.
+        prix_unitaire (Decimal): Snapshot du prix au moment de la vente.
+        sous_total (Decimal): Montant calculé (quantité × prix_unitaire).
+    """
     vente = models.ForeignKey(Vente, on_delete=models.CASCADE, related_name='lignes')
     medicament = models.ForeignKey(Medicament, on_delete=models.PROTECT, related_name='lignes_vente')
     quantite = models.PositiveIntegerField()

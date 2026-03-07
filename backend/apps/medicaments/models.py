@@ -2,9 +2,31 @@ from django.db import models
 from apps.categories.models import Categorie
 
 class Medicament(models.Model):
-    nom = models.CharField(max_length=200)
-    dci = models.CharField(max_length=200, blank=True, null=True, verbose_name="DCI")
-    categorie = models.ForeignKey(Categorie, on_delete=models.PROTECT, related_name="medicaments")
+    """
+    Représente un médicament dans l'inventaire de la pharmacie.
+
+    Attributs:
+        nom (str): Nom commercial du médicament.
+        dci (str): Dénomination Commune Internationale.
+        categorie (ForeignKey): Catégorie du médicament (antibiotique, antalgique...).
+        forme (str): Forme galénique (comprimé, sirop, injection...).
+        dosage (str): Dosage du médicament (ex: 500mg).
+        prix_achat (Decimal): Prix d'achat unitaire.
+        prix_vente (Decimal): Prix de vente public.
+        stock_actuel (int): Quantité disponible en stock.
+        stock_minimum (int): Seuil déclenchant une alerte de réapprovisionnement.
+        date_expiration (date): Date de péremption du médicament.
+        ordonnance_requise (bool): Indique si le médicament nécessite une ordonnance.
+        est_actif (bool): Soft delete. False = médicament archivé.
+    """
+    nom = models.CharField(max_length=200, verbose_name='Nom commercial')
+    dci = models.CharField(max_length=200, verbose_name='DCI', blank=True)
+    categorie = models.ForeignKey(
+        'categories.Categorie',
+        on_delete=models.PROTECT,
+        related_name='medicaments',
+        verbose_name='Catégorie'
+    )
     forme = models.CharField(max_length=100)
     dosage = models.CharField(max_length=100)
     prix_achat = models.DecimalField(max_digits=10, decimal_places=2)
@@ -13,16 +35,18 @@ class Medicament(models.Model):
     stock_minimum = models.PositiveIntegerField(default=10)
     date_expiration = models.DateField()
     ordonnance_requise = models.BooleanField(default=False)
+    est_actif = models.BooleanField(default=True, verbose_name='Actif')
     date_creation = models.DateTimeField(auto_now_add=True)
-    est_actif = models.BooleanField(default=True)
 
     class Meta:
-        verbose_name = "Médicament"
-        verbose_name_plural = "Médicaments"
+        verbose_name = 'Médicament'
+        verbose_name_plural = 'Médicaments'
+        ordering = ['nom']
 
     def __str__(self):
-        return f"{self.nom} {self.dosage} ({self.forme})"
+        return f'{self.nom} ({self.dosage})'
 
     @property
     def est_en_alerte(self):
+        """Retourne True si le stock est inférieur au seuil minimum."""
         return self.stock_actuel <= self.stock_minimum

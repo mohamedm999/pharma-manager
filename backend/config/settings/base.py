@@ -114,8 +114,8 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Pharma Manager API',
-    'DESCRIPTION': 'API for the Pharma Manager application',
+    'TITLE': 'PharmaManager API',
+    'DESCRIPTION': 'API de gestion de pharmacie — Développé avec SMARTHOLOL standards',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }

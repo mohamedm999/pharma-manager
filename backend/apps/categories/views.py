@@ -6,7 +6,7 @@ from .serializers import CategorieSerializer
 @extend_schema_view(
     list=extend_schema(
         summary="Lister les catégories",
-        description="Récupère la liste paginée de toutes les catégories de médicaments disponibles.",
+        description="Récupère la liste de toutes les catégories de médicaments disponibles (sans pagination).",
         tags=["Catégories"],
         responses={
             200: OpenApiResponse(
@@ -76,3 +76,4 @@ class CategorieViewSet(viewsets.ModelViewSet):
     """
     queryset = Categorie.objects.all()
     serializer_class = CategorieSerializer
+    pagination_class = None  # Les catégories sont un petit jeu de données, pas besoin de pagination

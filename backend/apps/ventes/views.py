@@ -6,12 +6,15 @@ from django.db import transaction
 from django.db.models import Sum, F
 from django.utils.timezone import now
 from apps.medicaments.models import Medicament
-from rest_framework.response import Response
-from django.db import transaction
+import csv
+from django.http import HttpResponse
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 from .models import Vente
 from .serializers import VenteSerializer, VenteDetailSerializer
+from .filters import VenteFilter
 
 @extend_schema_view(
     list=extend_schema(
@@ -84,6 +87,14 @@ from .serializers import VenteSerializer, VenteDetailSerializer
             400: OpenApiResponse(description="La vente est déjà annulée."),
             404: OpenApiResponse(description="Vente introuvable.")
         }
+    ),
+    export_csv=extend_schema(
+        summary="Exporter les ventes en CSV",
+        description="Génère un fichier CSV contenant l'historique des ventes filtrées.",
+        tags=["Ventes"],
+        responses={
+            200: OpenApiResponse(description="Fichier CSV généré.")
+        }
     )
 )
 class VenteViewSet(viewsets.ModelViewSet):
@@ -91,26 +102,14 @@ class VenteViewSet(viewsets.ModelViewSet):
     API endpoint pour gérer les ventes.
     """
     queryset = Vente.objects.all()
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_class = VenteFilter
 
     def get_serializer_class(self):
         # Utiliser le serializer détaillé (avec les noms des médicaments) pour la lecture
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'export_csv']:
             return VenteDetailSerializer
         return VenteSerializer
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        
-        # Filtres par date
-        date_debut = self.request.query_params.get('date_debut')
-        date_fin = self.request.query_params.get('date_fin')
-        
-        if date_debut:
-            queryset = queryset.filter(date_vente__date__gte=date_debut)
-        if date_fin:
-            queryset = queryset.filter(date_vente__date__lte=date_fin)
-            
-        return queryset
 
     @action(detail=True, methods=['post'])
     def annuler(self, request, pk=None):
@@ -138,7 +137,28 @@ class VenteViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(vente)
         return Response(serializer.data)
 
-
+    @action(detail=False, methods=['get'])
+    def export_csv(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="ventes_export.csv"'
+        response.write('\ufeff'.encode('utf8'))  # BOM pour Excel
+        
+        writer = csv.writer(response, delimiter=';')
+        writer.writerow(['ID', 'Reference', 'Date Vente', 'Statut', 'Total TTC', 'Notes'])
+        
+        for vente in queryset:
+            writer.writerow([
+                vente.id,
+                vente.reference,
+                vente.date_vente.strftime("%Y-%m-%d %H:%M:%S"),
+                vente.statut,
+                vente.total_ttc,
+                vente.notes or ""
+            ])
+            
+        return response
 class DashboardView(APIView):
     """
     API endpoint pour le tableau de bord (Vue globale)

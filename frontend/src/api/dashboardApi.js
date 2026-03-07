@@ -1,7 +1,10 @@
-import api from './axiosConfig';
+import axiosInstance from './axiosConfig';
 
+/**
+ * Récupère les indicateurs clés pour le tableau de bord.
+ * @returns {Promise<Object>} Statistiques et agrégations
+ */
 export const fetchDashboardMetrics = async () => {
-    // The endpoint is /ventes/dashboard/ since we added it to ventes/urls.py
-    const response = await api.get('/ventes/dashboard/');
+    const response = await axiosInstance.get('/ventes/dashboard/');
     return response.data;
 };

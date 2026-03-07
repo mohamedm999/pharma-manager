@@ -11,7 +11,9 @@ const MedicamentForm = ({ initialData, categories, onSubmit, isLoading }) => {
 
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData);
+      // Ne garder que les champs éditables, exclure les champs read-only du backend
+      const { id, est_en_alerte, categorie_nom, date_creation, ...editableData } = initialData;
+      setFormData({ ...defaultState, ...editableData });
     } else {
       setFormData(defaultState);
     }

@@ -1,28 +1,36 @@
-import api from './axiosConfig';
+import axiosInstance from './axiosConfig';
 
+/** 
+ * Récupère la liste paginée des médicaments. 
+ * @param {Object} params - Paramètres de filtrage (search, categorie, page) 
+ * @returns {Promise<Object>} Données paginées des médicaments 
+ */ 
 export const fetchMedicaments = async (params = {}) => {
-    // params peut inclure { page: 1, categorie: id, search: 'doli' }
-    const response = await api.get('/medicaments/', { params });
+    const response = await axiosInstance.get('/medicaments/', { params });
     return response.data;
 };
 
-export const createMedicament = async (medicamentData) => {
-    const response = await api.post('/medicaments/', medicamentData);
+/** 
+ * Crée un nouveau médicament. 
+ * @param {Object} data - Données du médicament 
+ */ 
+export const createMedicament = async (data) => {
+    const response = await axiosInstance.post('/medicaments/', data);
     return response.data;
 };
 
 export const updateMedicament = async (id, medicamentData) => {
     // on utilise patch pour partial_update ou put pour update total
-    const response = await api.patch(`/medicaments/${id}/`, medicamentData);
+    const response = await axiosInstance.patch(`/medicaments/${id}/`, medicamentData);
     return response.data;
 };
 
 export const deleteMedicament = async (id) => {
-    const response = await api.delete(`/medicaments/${id}/`);
+    const response = await axiosInstance.delete(`/medicaments/${id}/`);
     return response.data;
 };
 
 export const fetchAlertes = async (params = {}) => {
-    const response = await api.get('/medicaments/alertes/', { params });
+    const response = await axiosInstance.get('/medicaments/alertes/', { params });
     return response.data;
 };

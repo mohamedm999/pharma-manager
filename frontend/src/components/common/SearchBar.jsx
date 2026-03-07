@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const SearchBar = ({ onSearch, placeholder = "Rechercher...", delay = 500 }) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const onSearchRef = useRef(onSearch);
+  onSearchRef.current = onSearch;
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      onSearch(searchTerm);
+      onSearchRef.current(searchTerm);
     }, delay);
 
     // Nettoyer le timeout si l'utilisateur tape à nouveau avant la fin du délai
     return () => {
       clearTimeout(handler);
     };
-  }, [searchTerm, delay, onSearch]);
+  }, [searchTerm, delay]);
 
   return (
     <div style={styles.container}>

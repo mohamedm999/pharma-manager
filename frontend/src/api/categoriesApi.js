@@ -1,7 +1,11 @@
-import api from './axiosConfig';
+import axiosInstance from './axiosConfig';
 
+/**
+ * Récupère la liste des catégories.
+ * @returns {Promise<Array>} Liste des catégories
+ */
 export const fetchCategories = async () => {
-    const response = await api.get('/categories/');
+    const response = await axiosInstance.get('/categories/');
     return response.data;
 };
 

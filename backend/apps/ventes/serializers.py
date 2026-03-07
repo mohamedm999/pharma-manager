@@ -4,6 +4,8 @@ from apps.medicaments.models import Medicament
 from .models import Vente, LigneVente
 
 class LigneVenteSerializer(serializers.ModelSerializer):
+    """Serializer pour une ligne de vente. Les champs prix_unitaire et sous_total sont calculés par le backend."""
+
     # prix_unitaire and sous_total are read-only because they are computed by the backend
     prix_unitaire = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     sous_total = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
@@ -14,6 +16,11 @@ class LigneVenteSerializer(serializers.ModelSerializer):
 
 
 class VenteSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour la création d'une vente avec ses lignes (nested writable).
+    Gère la vérification de stock, la déduction automatique des quantités
+    et le calcul du total TTC.
+    """
     lignes = LigneVenteSerializer(many=True)
 
     class Meta:
@@ -52,12 +59,18 @@ class VenteSerializer(serializers.ModelSerializer):
             # Pas besoin de faire sum pour total_ttc car le save() de LigneVente 
             # (dans models.py) le met déjà à jour. Cependant, pour retourner la
             # vente avec le bon total_ttc dans la réponse, on rafraîchit l'instance :
+            # Passer le statut à COMPLETEE après création réussie
+            vente.statut = 'COMPLETEE'
+            vente.save(update_fields=['statut'])
+            
             vente.refresh_from_db()
             
             return vente
 
 
 class VenteDetailSerializer(serializers.ModelSerializer):
+    """Serializer en lecture seule pour le détail d'une vente, avec les noms de médicaments enrichis."""
+
     # Version lecture seule avec les noms enrichis
     lignes = serializers.SerializerMethodField()
 

@@ -3,6 +3,11 @@ from django.utils import timezone
 from .models import Medicament
 
 class MedicamentSerializer(serializers.ModelSerializer):
+    """
+    Serializer pour le modèle Medicament.
+    Gère la sérialisation, la validation des prix et des dates,
+    et expose le champ calculé 'est_en_alerte'.
+    """
     est_en_alerte = serializers.ReadOnlyField()
     categorie_nom = serializers.ReadOnlyField(source='categorie.nom')
 
