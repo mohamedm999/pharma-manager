@@ -77,9 +77,7 @@ const VentesPage = () => {
   };
 
   const results = data?.results || [];
-  const totalCount = data?.count || 0;
-  const PAGE_SIZE = 10;
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const totalPages = data?.total_pages || 1;
 
   return (
     <div style={styles.page}>

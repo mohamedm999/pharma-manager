@@ -90,11 +90,10 @@ const MedicamentsPage = () => {
     }
   };
 
-  // Extraction de la pagination DRF
+  // Extraction de la pagination enrichie DRF
   const results = medicamentsData?.results || [];
-  const totalCount = medicamentsData?.count || 0;
-  const PAGE_SIZE = 10;
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  const totalPages = medicamentsData?.total_pages || 1;
+  // const backendCurrentPage = medicamentsData?.current_page; // available for use
 
   return (
     <div style={styles.page}>

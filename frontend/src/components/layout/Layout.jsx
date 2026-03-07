@@ -1,7 +1,16 @@
 import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 
 const Layout = () => {
+  const { user, logout } = React.useContext(AuthContext);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <div style={styles.container}>
       {/* Sidebar de Navigation */}
@@ -51,6 +60,16 @@ const Layout = () => {
             </NavLink>
           </li>
         </ul>
+        
+        <div style={styles.userSection}>
+          <div style={styles.userInfo}>
+            <span style={styles.userAvatar}>👤</span>
+            <span style={styles.userName}>{user?.username || 'Utilisateur'}</span>
+          </div>
+          <button onClick={handleLogout} style={styles.logoutButton}>
+            Déconnexion
+          </button>
+        </div>
       </nav>
 
       {/* Contenu principal de la page */}
@@ -112,6 +131,36 @@ const styles = {
     overflowY: 'auto',
     position: 'relative',
     height: '100vh'
+  },
+  userSection: {
+    marginTop: 'auto',
+    padding: '1.5rem',
+    borderTop: '1px solid #374151',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem'
+  },
+  userInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem'
+  },
+  userAvatar: {
+    fontSize: '1.5rem'
+  },
+  userName: {
+    color: '#e5e7eb',
+    fontWeight: 'bold'
+  },
+  logoutButton: {
+    backgroundColor: '#ef4444',
+    color: 'white',
+    border: 'none',
+    padding: '0.5rem',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+    transition: 'background-color 0.2s'
   }
 };
 

@@ -7,16 +7,30 @@ const api = axios.create({
   },
 });
 
-// Intercepteur pour gérer les erreurs globales
+// Intercepteur pour injecter le token JWT
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Intercepteur pour gérer les erreurs globales (ex: 401 expiré)
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
-    // Logique globale d'erreur (ex: redirect si 401, toast global pour 500, etc.)
+    if (error.response?.status === 401 && window.location.pathname !== '/login') {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      window.location.href = '/login';
+    }
     console.error("API Error: ", error.response?.data || error.message);
-    
-    // On peut throw l'erreur pour laisser le composant appelant la gérer
     return Promise.reject(error);
   }
 );
