@@ -1,12 +1,16 @@
 from decimal import Decimal
 from rest_framework.test import APITestCase
 from django.urls import reverse
+from django.contrib.auth.models import User
 from .models import Vente
 from apps.medicaments.models import Medicament
 from apps.categories.models import Categorie
 
+
 class VenteAPITests(APITestCase):
     def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='testpass123')
+        self.client.force_authenticate(user=self.user)
         cat = Categorie.objects.create(nom="Cat")
         self.med = Medicament.objects.create(
             nom="Med", categorie=cat, stock_actuel=10, stock_minimum=5,

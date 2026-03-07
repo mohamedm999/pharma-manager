@@ -1,11 +1,15 @@
 from rest_framework.test import APITestCase
 from django.urls import reverse
+from django.contrib.auth.models import User
 from .models import Medicament
 from apps.categories.models import Categorie
 from decimal import Decimal
 
+
 class MedicamentAPITests(APITestCase):
     def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='testpass123')
+        self.client.force_authenticate(user=self.user)
         self.categorie = Categorie.objects.create(nom="Test Category")
         self.med1 = Medicament.objects.create(
             nom="Med 1", dci="DCI 1", categorie=self.categorie,
