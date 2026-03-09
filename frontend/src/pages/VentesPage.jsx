@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { LuPlus, LuShoppingCart, LuFilter, LuDownload } from 'react-icons/lu';
 import toast from 'react-hot-toast';
 import useVentes from '../hooks/useVentes';
+import VenteFilters from '../components/ventes/VenteFilters';
 import VenteList from '../components/ventes/VenteList';
 import VenteForm from '../components/ventes/VenteForm';
 import VenteDetail from '../components/ventes/VenteDetail';
@@ -18,8 +19,6 @@ const VentesPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [detailId, setDetailId] = useState(null);
   const [confirmCancel, setConfirmCancel] = useState(null);
-  const [dateDebut, setDateDebut] = useState('');
-  const [dateFin, setDateFin] = useState('');
 
   const ventes = data?.results || [];
   const totalPages = data?.total_pages || 1;
@@ -55,29 +54,11 @@ const VentesPage = () => {
     setFilters((prev) => ({ ...prev, page }));
   };
 
-  const handleDateFilter = () => {
-    const newFilters = { ...filters, page: 1 };
-    if (dateDebut) newFilters.date_debut = dateDebut;
-    else delete newFilters.date_debut;
-    if (dateFin) newFilters.date_fin = dateFin;
-    else delete newFilters.date_fin;
-    setFilters(newFilters);
-  };
-
-  const clearDateFilter = () => {
-    setDateDebut('');
-    setDateFin('');
-    const newFilters = { ...filters, page: 1 };
-    delete newFilters.date_debut;
-    delete newFilters.date_fin;
-    setFilters(newFilters);
-  };
-
   const handleExportCSV = async () => {
     try {
       const response = await axiosInstance.get('/ventes/export_csv/', {
         responseType: 'blob',
-        params: { date_debut: dateDebut || undefined, date_fin: dateFin || undefined },
+        params: { ...filters },
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
@@ -124,33 +105,7 @@ const VentesPage = () => {
         </div>
       </div>
 
-      {/* Date Filters */}
-      <div className="date-filters">
-        <div className="date-group">
-          <label>Date début</label>
-          <input
-            type="date"
-            value={dateDebut}
-            onChange={(e) => setDateDebut(e.target.value)}
-          />
-        </div>
-        <div className="date-group">
-          <label>Date fin</label>
-          <input
-            type="date"
-            value={dateFin}
-            onChange={(e) => setDateFin(e.target.value)}
-          />
-        </div>
-        <button className="btn btn-primary btn-sm" onClick={handleDateFilter}>
-          <LuFilter size={14} /> Filtrer
-        </button>
-        {(dateDebut || dateFin) && (
-          <button className="btn btn-ghost btn-sm" onClick={clearDateFilter}>
-            Réinitialiser
-          </button>
-        )}
-      </div>
+      <VenteFilters filters={filters} onFiltersChange={setFilters} />
 
       {loading ? (
         <LoadingSpinner />
