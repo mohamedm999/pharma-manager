@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { LuPlus, LuFolderTree, LuSearch, LuX } from 'react-icons/lu';
+import { LuPlus, LuFolderTree } from 'react-icons/lu';
 import toast from 'react-hot-toast';
 import useCategories from '../hooks/useCategories';
 import CategorieList from '../components/categories/CategorieList';
@@ -8,6 +8,7 @@ import Modal from '../components/common/Modal';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import SearchBar from '../components/common/SearchBar';
 import { createCategorie, updateCategorie, deleteCategorie } from '../api/categoriesApi';
 
 const CategoriesPage = () => {
@@ -106,20 +107,11 @@ const CategoriesPage = () => {
       {/* Search bar */}
       {!loading && !error && categories.length > 0 && (
         <div className="filters-bar">
-          <div className="filter-search">
-            <LuSearch className="search-icon" size={16} />
-            <input
-              type="text"
-              placeholder="Rechercher une catégorie…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button className="clear-btn" onClick={() => setSearchQuery('')}>
-                <LuX size={12} />
-              </button>
-            )}
-          </div>
+          <SearchBar
+            value={searchQuery}
+            onSearch={setSearchQuery}
+            placeholder="Rechercher une catégorie…"
+          />
         </div>
       )}
 
